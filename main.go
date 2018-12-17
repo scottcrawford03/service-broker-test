@@ -37,16 +37,3 @@ func main() {
 
 	brokerLogger.Fatal("http-listen", http.ListenAndServe(":3000", nil))
 }
-
-// string                  `json:"id"`
-// string                  `json:"name"`
-// string                  `json:"description"`
-// bool                    `json:"bindable"`
-// bool                    `json:"instances_retrievable,omitempty"`
-// bool                    `json:"bindings_retrievable,omitempty"`
-// []string                `json:"tags,omitempty"`
-// bool                    `json:"plan_updateable"`
-// []ServicePlan           `json:"plans"`
-// []RequiredPermission    `json:"requires,omitempty"`
-// *ServiceMetadata        `json:"metadata,omitempty"`
-// *ServiceDashboardClient `json:"dashboard_client,omitempty"`
