@@ -13,15 +13,26 @@ import (
 )
 
 const (
-	APIToken string = "your_do_token_here"
+	APIToken string = "your_token_here"
 )
 
 type TokenSource struct {
 	AccessToken string
 }
 
+type ClusterConnectionData struct {
+	Uri      string `json:"uri"`
+	Database string `json:"database"`
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	SSL      string `json:"ssl"`
+}
+
 type ClusterData struct {
-	Id string `json:"id"`
+	Id             string                `json:"id"`
+	ConnectionData ClusterConnectionData `json:"connection"`
 }
 type ClusterResponse struct {
 	Cluster ClusterData `json:"cluster"`
@@ -57,12 +68,12 @@ var testplans = []brokerapi.ServicePlan{
 		Description: "Smallest single node cluster running in nyc3",
 	},
 	brokerapi.ServicePlan{
-		ID:          "1",
+		ID:          "2",
 		Name:        "Medium",
 		Description: "Medium single node cluster running in nyc3",
 	},
 	brokerapi.ServicePlan{
-		ID:          "1",
+		ID:          "3",
 		Name:        "Large",
 		Description: "Large single node cluster running in nyc3",
 	},
@@ -180,6 +191,7 @@ func (b *TestServiceBroker) Deprovision(ctx context.Context, instanceID string, 
 	tokenSource := &TokenSource{
 		AccessToken: APIToken,
 	}
+
 	instance := b.instanceMap[instanceID]
 	url := "https://api.digitalocean.com/v2/databases/" + instance.internalID
 	fmt.Println("URL:>", url)
@@ -213,7 +225,30 @@ func (b *TestServiceBroker) GetInstance(ctx context.Context, instanceID string) 
 
 func (b *TestServiceBroker) Bind(ctx context.Context, instanceID, bindingID string, details brokerapi.BindDetails, asyncAllowed bool) (brokerapi.Binding, error) {
 	fmt.Println("in the bind")
-	return brokerapi.Binding{}, nil
+
+	tokenSource := &TokenSource{
+		AccessToken: APIToken,
+	}
+	oauthClient := oauth2.NewClient(context.Background(), tokenSource)
+
+	instance := b.instanceMap[instanceID]
+	url := "https://api.digitalocean.com/v2/databases/" + instance.internalID
+	fmt.Println("URL:>", url)
+
+	resp, err := oauthClient.Get(url)
+	if err != nil {
+		fmt.Println(err)
+		return brokerapi.Binding{}, err
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := ioutil.ReadAll(resp.Body)
+	var clusterResponse ClusterResponse
+	json.Unmarshal(respBody, &clusterResponse)
+
+	return brokerapi.Binding{
+		Credentials: clusterResponse.Cluster.ConnectionData,
+	}, nil
 }
 
 func (b *TestServiceBroker) Unbind(ctx context.Context, instanceID, bindingID string, details brokerapi.UnbindDetails, asyncAllowed bool) (brokerapi.UnbindSpec, error) {
